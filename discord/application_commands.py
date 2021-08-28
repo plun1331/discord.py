@@ -17,3 +17,19 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
+
+from __future__ import annotations
+
+from typing import Any, ClassVar, Dict, List, Optional, TYPE_CHECKING, Tuple, Type, TypeVar, Union
+from .enums import try_enum, ComponentType, ButtonStyle
+from .utils import get_slots, MISSING
+from .partial_emoji import PartialEmoji, _EmojiTag
+
+from .types.components import (
+
+if TYPE_CHECKING:
+    from .emoji import Emoji
+
+class SlashCommand(ApplicationCommand):
+    ...
