@@ -227,7 +227,7 @@ class Client:
             'before_identify': self._call_before_identify_hook
         }
 
-        self._enable_debug_events: bool = options.pop('enable_debug_events', False)
+        self._enable_debug_events: bool = options.pop('enable_debug_events', True)
         self._connection: ConnectionState = self._get_state(**options)
         self._connection.shard_count = self.shard_count
         self._closed: bool = False
