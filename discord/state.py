@@ -35,6 +35,7 @@ import inspect
 
 import os
 
+from .application_commands import ApplicationCommand
 from .guild import Guild
 from .activity import BaseActivity
 from .user import User, ClientUser
@@ -253,6 +254,7 @@ class ConnectionState:
         self._emojis: Dict[int, Emoji] = {}
         self._stickers: Dict[int, GuildSticker] = {}
         self._guilds: Dict[int, Guild] = {}
+        self._commands: Dict[int, ApplicationCommand] = {}
         if views:
             self._view_store: ViewStore = ViewStore(self)
 
@@ -389,6 +391,9 @@ class ConnectionState:
         for sticker in guild.stickers:
             self._stickers.pop(sticker.id, None)
 
+        for command in guild.commands:
+            self._commands.pop(command.id, None)
+
         del guild
 
     @property
@@ -473,6 +478,13 @@ class ConnectionState:
             channel = guild and guild._resolve_channel(channel_id)
 
         return channel or PartialMessageable(state=self, id=channel_id), guild
+
+    def _store_command(self, command) -> None:
+        command_id = int(command['id'])
+        self._commands[command_id] = command = ApplicationCommand(state=self, data=command)
+
+    def _get_command(self, command_id: int) -> Optional[ApplicationCommand]:
+        return self._commands.get(command_id)
 
     async def chunker(
         self, guild_id: int, query: str = '', limit: int = 0, presences: bool = False, *, nonce: Optional[str] = None

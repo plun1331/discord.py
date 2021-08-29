@@ -59,6 +59,7 @@ from .stage_instance import *
 from .interactions import *
 from .components import *
 from .threads import *
+from .application_commands import *
 
 
 class VersionInfo(NamedTuple):

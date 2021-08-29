@@ -170,6 +170,26 @@ else:
             except (KeyError, TypeError):
                 return value
 
+class ApplicationCommandType(Enum):
+    chat_input = 1
+    user = 2
+    message = 3
+
+class ApplicationCommandOptionType(Enum):
+    subcommand = 1
+    subcommand_group = 2
+    string = 3
+    integer = 4
+    boolean = 5
+    user = 6
+    channel = 7
+    role = 8
+    mentionable = 9
+    number = 10
+
+class ApplicationCommandPermissionType(Enum):
+    role = 1
+    user = 2
 
 class ChannelType(Enum):
     text = 0

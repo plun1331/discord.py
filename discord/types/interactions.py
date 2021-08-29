@@ -234,3 +234,35 @@ class _EditApplicationCommandOptional(TypedDict, total=False):
 class EditApplicationCommand(_EditApplicationCommandOptional):
     name: str
     default_permission: bool
+
+class ApplicationCommandOption(TypedDict):
+    type: int
+    name: str
+    description: str
+    required: bool
+    choices: Optional[List[ApplicationCommandChoice]]
+    options: Optional[List[ApplicationCommandOption]]
+
+class ApplicationCommandChoice(TypedDict):
+    name: str
+    value: str
+
+class ApplicationCommand(TypedDict):
+    id: int
+    type: int
+    application_id: int
+    guild_id: Optional[int]
+    name: str
+    description: str
+    options: Optional[List[ApplicationCommandOption]]
+    default_permission: bool
+
+class ApplicationCommandPermission(TypedDict):
+    id: int
+    type: int
+    permission: bool
+
+class ApplicationCommandPermissions(TypedDict):
+    id: int
+    type: int
+    permission: bool

@@ -25,11 +25,13 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import asyncio
+import json
+from discord.application_commands import ApplicationCommand, Option, PartialApplicationCommand
 import logging
 import signal
 import sys
 import traceback
-from typing import Any, Callable, Coroutine, Dict, Generator, List, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union
+from typing import Any, Callable, Coroutine, Dict, Generator, List, Optional, Sequence, TYPE_CHECKING, Tuple, TypeVar, Union, overload
 
 import aiohttp
 
@@ -730,6 +732,170 @@ class Client:
         .. versionadded:: 1.5
         """
         return self._connection.intents
+
+    # interactions
+
+    async def fetch_commands(self):
+        """|coro|
+
+        Retrives the client's global :class:`ApplicationCommand`s.
+
+        Raises
+        -------
+        HTTPException
+            Fetching the commands failed.
+
+        Returns
+        --------
+        :class:`List[ApplicationCommand]`
+            A list of registered commands.
+        """
+        data = await self.http.get_global_commands(self._state.application_id)
+        return [ApplicationCommand(data=d, state=self._state) for d in data]
+
+    async def delete_command(self, command: int) -> None:
+        """|coro|
+
+        Removes an :class:`ApplicationCommand`.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command to remove.
+
+        Raises
+        -------
+        HTTPException
+            Removing the command failed.
+        """
+        await self.http.delete_global_command(self._state.application_id, command)
+
+    async def create_slash_command(self, name: str, description: str, options: list) -> ApplicationCommand:
+        """|coro|
+
+        Creates a :class:`ApplicationCommand` of type 1. (Slash Command)
+
+        .. note::
+
+            The command is not automatically added to the internal
+            list of commands.
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The name of the command
+
+        description: :class:`str`
+            The description of the command
+
+        options: :class:`Option`
+            The command's options.
+
+        Raises
+        -------
+        HTTPException
+            Creating the command failed.
+
+        Returns
+        --------
+        :class:`ApplicationCommand`
+            The newly created slash command.
+        """
+        payload = {
+            "name": name,
+            "type": 1,
+            "description": description,
+            "options": [o.to_dict() for o in (options or [])]
+        }
+        data = await self.http.upsert_global_command(self.application_id, self.id, payload)
+        return ApplicationCommand(data=data, state=self._state)
+
+    async def overwrite_commands(self, *commands: PartialApplicationCommand) -> List[ApplicationCommand]:
+        """|coro|
+
+        Creates a :class:`ApplicationCommand` of type 1. (Slash Command)
+
+        Parameters
+        -----------
+        *commands: :class:`PartialApplicationCommand`
+            A new set of commands.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the commands failed.
+
+        Returns
+        --------
+        :class:`List[ApplicationCommand]`
+            The new set of commands.
+        """
+        payload = [command.to_dict() for command in commands]
+        data = await self.http.bulk_upsert_global_commands(self.application_id, payload)
+        return [ApplicationCommand(data=command, state=self._connection) for command in data]
+
+    @overload
+    async def edit_command(
+        self,
+        command: int,
+        *,
+        name: Optional[str] = ...,
+        description: Optional[str] = ...,
+        options: List[Option] = ...,
+        default_permission: bool = ...
+    ) -> ApplicationCommand:
+        ...
+
+    async def edit_command(self, command: int, **options) -> ApplicationCommand:
+        """|coro|
+
+        Edits an :class:`ApplicationCommand`.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command.
+
+        name: :class:`Optional[str]`
+            The command's new name.
+
+        description: :class:`Optional[str]`
+            The command's new description.
+
+        options: :class:`Optional[Option]`
+            The command's new options.
+
+        default_permission: :class:`Optional[bool]`
+            The command's new default permission.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Editing the command failed.
+        """
+        payload = {}
+        try:
+            payload['name'] = options.pop('name')
+        except KeyError:
+            pass
+        try:
+            payload['description'] = options.pop('description')
+        except KeyError:
+            pass
+        try:
+            payload['options'] = options.pop('options')
+        except KeyError:
+            pass
+        try:
+            payload['default_permission'] = options.pop('default_permission')
+        except KeyError:
+            pass
+        data = await self.http.edit_global_command(self._state.application_id, command, payload)
+        return ApplicationCommand(data=data, state=self._state)
 
     # helpers/getters
 

@@ -458,6 +458,7 @@ class InteractionResponse:
         embeds: List[Embed] = MISSING,
         view: View = MISSING,
         tts: bool = False,
+        allowed_mentions: AllowedMentions = MISSING,
         ephemeral: bool = False,
     ) -> None:
         """|coro|
@@ -520,6 +521,9 @@ class InteractionResponse:
 
         if view is not MISSING:
             payload['components'] = view.to_components()
+
+        if allowed_mentions is not MISSING:
+            payload['allowed_mentions'] = allowed_mentions.to_dict()
 
         parent = self._parent
         adapter = async_context.get()

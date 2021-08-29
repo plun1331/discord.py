@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from __future__ import annotations
 
 import copy
+from discord.application_commands import ApplicationCommand, ApplicationCommandPermission, ApplicationCommandPermissions, Option, PartialApplicationCommand
 import unicodedata
 from typing import (
     Any,
@@ -1713,6 +1714,270 @@ class Guild(Hashable):
         """
         data = await self._state.http.get_member(self.id, member_id)
         return Member(data=data, state=self._state, guild=self)
+
+    async def fetch_commands(self):
+        """|coro|
+
+        Retrives a guild's :class:`ApplicationCommand`s.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the commands failed.
+
+        Returns
+        --------
+        :class:`List[ApplicationCommand]`
+            A list of registered commands.
+        """
+        data = await self._state.http.get_guild_commands(self._state.application_id, self.id)
+        return [ApplicationCommand(data=d, state=self._state) for d in data]
+
+    async def delete_command(self, command: int) -> None:
+        """|coro|
+
+        Removes an :class:`ApplicationCommand` from the guild.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command to remove from the guild.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Removing the command failed.
+        """
+        await self._state.http.delete_guild_command(self._state.application_id, self.id, command)
+
+    async def create_slash_command(self, name: str, description: str, options: list) -> ApplicationCommand:
+        """|coro|
+
+        Creates a :class:`ApplicationCommand` of type 1. (Slash Command)
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The name of the command
+
+        description: :class:`str`
+            The description of the command
+
+        options: :class:`Option`
+            The command's options.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Creating the command failed.
+
+        Returns
+        --------
+        :class:`ApplicationCommand`
+            The newly created slash command.
+        """
+        payload = {
+            "name": name,
+            "type": 1,
+            "description": description,
+            "options": [o.to_dict() for o in (options or [])]
+        }
+        data = await self._state.http.upsert_guild_command(self._state.application_id, self.id, payload)
+        return ApplicationCommand(data=data, state=self._state)
+
+    async def overwrite_commands(self, *commands: PartialApplicationCommand) -> List[ApplicationCommand]:
+        """|coro|
+
+        Overwrites existing :class:`ApplicationCommand`s in the guild.
+
+        Parameters
+        -----------
+        *commands: :class:`PartialApplicationCommand`
+            A new set of commands.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the commands failed.
+
+        Returns
+        --------
+        :class:`List[ApplicationCommand]`
+            The new set of commands.
+        """
+        payload = [command.to_dict() for command in commands]
+        data = await self._state.http.bulk_upsert_guild_commands(self._state.application_id, self.id, payload)
+        return [ApplicationCommand(data=command, state=self._state) for command in data]
+
+    @overload
+    async def edit_command(
+        self,
+        command: int,
+        *,
+        name: Optional[str] = ...,
+        description: Optional[str] = ...,
+        options: List[Option] = ...,
+        default_permission: bool = ...
+    ) -> ApplicationCommand:
+        ...
+
+    async def edit_command(self, command: int, **options) -> ApplicationCommand:
+        """|coro|
+
+        Edits an :class:`ApplicationCommand`.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command.
+
+        name: :class:`Optional[str]`
+            The command's new name.
+
+        description: :class:`Optional[str]`
+            The command's new description.
+
+        options: :class:`Optional[Option]`
+            The command's new options.
+
+        default_permission: :class:`Optional[bool]`
+            The command's new default permission.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Editing the command failed.
+        """
+        payload = {}
+        try:
+            payload['name'] = options.pop('name')
+        except KeyError:
+            pass
+        try:
+            payload['description'] = options.pop('description')
+        except KeyError:
+            pass
+        try:
+            payload['options'] = options.pop('options')
+        except KeyError:
+            pass
+        try:
+            payload['default_permission'] = options.pop('default_permission')
+        except KeyError:
+            pass
+        data = await self._state.http.edit_guild_command(self._state.application_id, self.id, command, payload)
+        return ApplicationCommand(data=data, state=self._state)
+
+    async def fetch_command_permissions(self, command: int) -> ApplicationCommandPermissions:
+        """|coro|
+
+        Fetches an :class:`ApplicationCommand`'s permissions.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the command failed.
+
+        Returns
+        --------
+        :class:`ApplicationCommandPermissions`
+            The new set of commands.
+        """
+        data = await self._state.http.get_application_command_permissions(self._state.application_id, self.id, command)
+        return ApplicationCommandPermissions(data)
+
+    async def edit_command_permissions(self, command: int, *permissions: List[ApplicationCommandPermission]):
+        """|coro|
+
+        Edits an :class:`ApplicationCommand`'s permissions.
+
+        Parameters
+        -----------
+        command: :class:`int`
+            The ID of the command
+
+        permissions: :class:`List[ApplicationCommandPermission]`
+            The command's new permissions.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the command failed.
+        InvalidArgument
+            An invalid amount of permissions were passed.
+
+        Returns
+        --------
+        :class:`ApplicationCommandPermissions`
+            The command's new permissions.
+        """
+        if len(permissions) >= 10:
+            raise InvalidArgument('You can only add up to 10 permission overwrites for a command')
+        if not permissions:
+            raise InvalidArgument('You must provide at least one permission')
+        payload = {
+            'permissions': [p.to_dict() for p in permissions]
+        }
+        data = await self._state.http.edit_application_command_permissions(self._state.application_id, self.id, command, payload)
+        return ApplicationCommandPermissions(data)    
+
+    async def bulk_edit_command_permissions(self, *permissions: Dict[int, List[ApplicationCommandPermission]]):
+        """|coro|
+
+        Fetches an :class:`ApplicationCommand` from the guild.
+
+        Parameters
+        -----------
+
+        permissions: :class:`Dict[int, List[ApplicationCommandPermission]]`
+            A dict containing the command's IDs as the key, and a list of :class:`Permissions` as the value.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Fetching the command failed.
+        InvalidArgument
+            An invalid amount of permissions were passed.
+
+        Returns
+        --------
+        :class:`List[ApplicationCommandPermissions]`
+            The new command permissions.
+        """
+        if len(permissions) >= 10:
+            raise InvalidArgument('You can only add up to 10 permission overwrites for a command')
+        if not permissions:
+            raise InvalidArgument('You must provide at least one permission')
+        payload = []
+        for command, perms in permissions:
+            payload.append({
+                'id': command,
+                'permissions': [p.to_dict() for p in perms]
+            })
+        data = await self._state.http.bulk_edit_guild_application_command_permissions(self._state.application_id, self.id, payload)
+        return [ApplicationCommandPermissions(p) for p in data]
+
 
     async def fetch_ban(self, user: Snowflake) -> BanEntry:
         """|coro|
