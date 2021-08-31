@@ -203,7 +203,7 @@ class Bot(Client):
         self.all_commands[command.name] = command
         
     def remove_command(self, command: str):
-        return self.all_commands.pop(command.name, None)
+        return self.all_commands.pop(command, None)
 
     async def is_owner(self, user: discord.User) -> bool:
         """|coro|
