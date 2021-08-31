@@ -127,7 +127,7 @@ class Bot(Client):
         if command.guild_ids is not None and ctx.guild_id not in command.guild_ids:
             raise CommandNotFound(f'Command {ctx.command_name} was not found in guild {ctx.guild_id}')
         data = ctx._data
-        options = [o for o in data['options'] if o['type'] not in (1, 2)]
+        options = [o for o in data.get('options', []) if o.get('type') not in (1, 2)]
         args = {}
         resolved = data.get('resolved', {})
         for option in options:
