@@ -25,32 +25,12 @@ class Command:
         self.enabled: bool = kwargs.get('enabled', True)
 
         try:
-            checks = func.__commands_checks__
-            checks.reverse()
+            permissions: list = func.__permissions__
+            permissions.reverse()
         except AttributeError:
-            checks = kwargs.get('checks', [])
+            permissions = []
 
-        self.checks = checks
-
-        try:
-            cooldown = func.__commands_cooldown__
-        except AttributeError:
-            cooldown = kwargs.get('cooldown')
-        
-        if cooldown is None:
-            buckets = CooldownMapping(cooldown, BucketType.default)
-        elif isinstance(cooldown, CooldownMapping):
-            buckets = cooldown
-        else:
-            raise TypeError("Cooldown must be a an instance of CooldownMapping or None.")
-        self._buckets: CooldownMapping = buckets
-
-        try:
-            max_concurrency = func.__commands_max_concurrency__
-        except AttributeError:
-            max_concurrency = kwargs.get('max_concurrency')
-
-        self._max_concurrency: Optional[MaxConcurrency] = max_concurrency
+        self.permissions = permissions
 
         self.cog = None
 

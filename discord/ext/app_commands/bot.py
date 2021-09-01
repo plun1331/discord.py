@@ -1,4 +1,6 @@
 import asyncio
+from discord.message import Message
+from discord.application_commands import ApplicationCommand
 import json
 import discord
 from .commands import Command
@@ -9,7 +11,7 @@ from ...errors import InvalidData
 from ...user import User
 from ...member import Member
 from typing import Any, Callable, Dict, List, Mapping, Optional, Union
-from ...enums import ChannelType
+from ...enums import ApplicationCommandType, ChannelType
 from .context import Context
 from ...interactions import MISSING, Interaction, InteractionType
 from ...client import Client
@@ -107,7 +109,14 @@ class Bot(Client):
         if interaction.type != InteractionType.application_command:
             return
         ctx = self.get_context(interaction)
-        await self.handle_command(ctx)
+        if ctx.command_type == ApplicationCommandType.chat_input:
+            return await self.handle_slash_command(ctx)
+        elif ctx.command_type == ApplicationCommandType.message:
+            return await self.handle_message_command(ctx)
+        elif ctx.command_type == ApplicationCommandType.user:
+            return await self.handle_user_command(ctx)
+        else:
+            pass
 
     async def sync_commands(self) -> None:
         commands = [c.app_command for c in self.commands if c.guild_ids is None]
@@ -118,9 +127,25 @@ class Bot(Client):
                 guilds.setdefault(guild_id, []).append(command)
         for guild, commands in guilds.items():
             payload = [command.app_command.to_dict() for command in commands]
-            await self.http.bulk_upsert_guild_commands(self.application_id, guild, payload)
+            _cmds = {c.name: c for c in commands}
+            commands = await self.http.bulk_upsert_guild_commands(self.application_id, guild, payload)
+            for command in commands:
+                cmd = ApplicationCommand(state=self._connection, data=command)
+                cmd_name = cmd.name
+                for option in cmd.options:
+                    if option.type.value in (1, 2):
+                        cmd_name += ' ' + option.name
+                _cmds[cmd_name].app_command = cmd
+            perms_payload = []
+            for command in _cmds.values():
+                if command.permissions:
+                    perms_payload.append({
+                        'id': command.app_command.id,
+                        'permissions': [p.to_dict() for p in command.permissions]
+                    })
+            await self.http.bulk_edit_guild_application_command_permissions(self.application_id, guild, perms_payload)
 
-    async def handle_command(self, ctx: Context):
+    async def handle_slash_command(self, ctx: Context):
         if ctx.command_name not in self.all_commands:
             raise CommandNotFound(f'Command {ctx.command_name} was not found')
         command = self.all_commands[ctx.command_name]
@@ -187,11 +212,55 @@ class Bot(Client):
                             v: GuildChannel = factory(guild=ctx.guild, state=self._connection, data=data)  # type: ignore
             option['value'] = v
             args[option['name']] = option['value']
+        ctx.args = args
         self.dispatch('command', ctx)
         try:
             if ctx.cog is None:
                 return await ctx.command.callback(ctx, **args)
             return await ctx.command.callback(ctx.cog, ctx, **args)
+        except Exception as exc:
+            return await ctx.command.dispatch_error(ctx, exc)
+        finally:
+            self.dispatch('command_completion', ctx)
+
+    async def handle_message_command(self, ctx: Context):
+        if ctx.command_name not in self.all_commands:
+            raise CommandNotFound(f'Command {ctx.command_name} was not found')
+        command = self.all_commands[ctx.command_name]
+        if command.guild_ids is not None and ctx.guild_id not in command.guild_ids:
+            raise CommandNotFound(f'Command {ctx.command_name} was not found in guild {ctx.guild_id}')
+        message = Message(state=self._connection, channel=ctx.channel, data=list(ctx._data['resolved']['messages'].values())[0])
+        ctx.args = {'message': message}
+        self.dispatch('command', ctx)
+        try:
+            if ctx.cog is None:
+                return await ctx.command.callback(ctx, message=message)
+            return await ctx.command.callback(ctx.cog, ctx, message=message)
+        except Exception as exc:
+            return await ctx.command.dispatch_error(ctx, exc)
+        finally:
+            self.dispatch('command_completion', ctx)
+
+    async def handle_user_command(self, ctx: Context):
+        resolved = ctx._data['resolved']
+        user = None
+        if resolved.get('members'):
+            user = list(resolved['members'].values())[0]
+            if resolved.get('users'):
+                user['user'] = list(resolved['users'].values())[0]
+            user = Member(data=user, guild=ctx.guild, state=self._connection)
+        else:
+            if resolved.get('users'):
+                v = list(resolved['users'].values())[0]
+                v = User(data=user, state=self._connection)
+        if user is None:
+            raise InvalidData('Could not resolve user')
+        ctx.args = {'user': user}
+        self.dispatch('command', ctx)
+        try:
+            if ctx.cog is None:
+                return await ctx.command.callback(ctx, user=user)
+            return await ctx.command.callback(ctx.cog, ctx, user=user)
         except Exception as exc:
             return await ctx.command.dispatch_error(ctx, exc)
         finally:

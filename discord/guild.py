@@ -1791,6 +1791,70 @@ class Guild(Hashable):
         data = await self._state.http.upsert_guild_command(self._state.application_id, self.id, payload)
         return ApplicationCommand(data=data, state=self._state)
 
+    async def create_user_command(self, name: str, *, default_permission: bool = True) -> ApplicationCommand:
+        """|coro|
+
+        Creates a :class:`ApplicationCommand` of type 2. (User Command)
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The name of the command
+
+        default_permission: :class:`bool`
+            Whether the command is enabled by default when the bot is added to a guild.
+
+        Raises
+        -------
+        Forbidden
+            You do not have access to the guild.
+        HTTPException
+            Creating the command failed.
+
+        Returns
+        --------
+        :class:`ApplicationCommand`
+            The newly created user command.
+        """
+        payload = {
+            "name": name,
+            "type": 2,
+            "default_permission": default_permission
+        }
+        data = await self._state.http.upsert_guild_command(self.application_id, self.id, payload)
+        return ApplicationCommand(data=data, state=self._state)
+
+    async def create_message_command(self, name: str, *, default_permission: bool = True) -> ApplicationCommand:
+        """|coro|
+
+        Creates a :class:`ApplicationCommand` of type 3. (Message Command)
+
+        Parameters
+        -----------
+        name: :class:`str`
+            The name of the command
+
+        default_permission: :class:`bool`
+            Whether the command is enabled by default when the bot is added to a guild.
+
+        Raises
+        -------
+        HTTPException
+            Creating the command failed.
+
+        Returns
+        --------
+        :class:`ApplicationCommand`
+            The newly created user command.
+        """
+        payload = {
+            "name": name,
+            "type": 3,
+            "default_permission": default_permission
+        }
+        data = await self._state.http.upsert_guild_command(self.application_id, self.id, payload)
+        return ApplicationCommand(data=data, state=self._state)
+
     async def overwrite_commands(self, *commands: PartialApplicationCommand) -> List[ApplicationCommand]:
         """|coro|
 

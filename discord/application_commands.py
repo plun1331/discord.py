@@ -128,7 +128,7 @@ class PartialApplicationCommand:
     def __init__(self, name: str, description: str, type: ApplicationCommandType, *, options: List[Option] = None, default_permission: bool = True):
         self.type = type
         self.name = name
-        self.description = description
+        self.description = description or ''
         self.options = options or []
         self.default_permission = default_permission
 

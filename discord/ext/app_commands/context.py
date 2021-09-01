@@ -1,3 +1,5 @@
+from discord.message import Message
+from discord.enums import try_enum, ApplicationCommandType
 from ...application_commands import ApplicationCommand
 from ...webhook.async_ import _WebhookState, handle_message_parameters, async_context
 from ...errors import InvalidArgument
@@ -15,9 +17,10 @@ class Context:
         self.guild = interaction.guild
         self.guild_id = interaction.guild_id
         self.author = interaction.user
-        self.message = interaction.message
         self.permissions = interaction.permissions
         self._data = interaction.data
+        self.message = None
+        self.command_type = try_enum(ApplicationCommandType, self._data['type'])
         self.app_command = ApplicationCommand(state=self.bot._connection, data=self._data)
         self.command_name = self.app_command.name
         self.command = bot.all_commands[self.command_name]
