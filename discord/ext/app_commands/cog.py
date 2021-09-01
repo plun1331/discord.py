@@ -385,8 +385,7 @@ class Cog(metaclass=CogMeta):
 
         try:
             for command in self.__cog_commands__:
-                if command.parent is None:
-                    bot.remove_command(command.name)
+                bot.remove_command(command.name)
 
             for _, method_name in self.__cog_listeners__:
                 bot.remove_listener(getattr(self, method_name))

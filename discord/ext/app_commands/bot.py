@@ -152,7 +152,7 @@ class Bot(Client):
         if command.guild_ids is not None and ctx.guild_id not in command.guild_ids:
             raise CommandNotFound(f'Command {ctx.command_name} was not found in guild {ctx.guild_id}')
         data = ctx._data
-        options = [o for o in data['options'] if o['type'] not in (1, 2)]
+        options = [o for o in data.get('options', []) if o.get('type') not in (1, 2)]
         args = {}
         resolved = data.get('resolved', {})
         for option in options:
@@ -270,6 +270,9 @@ class Bot(Client):
         if command.name in self.all_commands:
             raise CommandRegistrationError(command.name)
         self.all_commands[command.name] = command
+        
+    def remove_command(self, command: str):
+        return self.all_commands.pop(command, None)
 
     async def is_owner(self, user: discord.User) -> bool:
         """|coro|
@@ -486,10 +489,7 @@ class Bot(Client):
         cog = self.__cogs.pop(name, None)
         if cog is None:
             return
-
-        help_command = self._help_command
-        if help_command and help_command.cog is cog:
-            help_command.cog = None
+        
         cog._eject(self)
 
         return cog

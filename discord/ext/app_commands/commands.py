@@ -12,6 +12,7 @@ class Command:
             raise TypeError('Callback must be a coroutine.')
 
         self.__original_kwargs__ = kwargs.copy()
+        self.module = func.__module__
 
         self.app_command = application_command
         self.guild_ids = kwargs.get('guild_ids')
