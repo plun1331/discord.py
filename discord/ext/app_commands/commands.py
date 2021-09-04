@@ -45,14 +45,8 @@ class Command:
             return self.copy()
 
     def _ensure_assignment_on_copy(self, other):
-        if self.checks != other.checks:
-            other.checks = self.checks.copy()
-        if self._buckets.valid and not other._buckets.valid:
-            other._buckets = self._buckets.copy()
-        if self._max_concurrency != other._max_concurrency:
-            # _max_concurrency won't be None at this point
-            other._max_concurrency = self._max_concurrency.copy()  # type: ignore
-
+        if self.permissions != other.permissions:
+            other.permissions = self.permissions.copy()
         try:
             other.on_error = self.on_error
         except AttributeError:
