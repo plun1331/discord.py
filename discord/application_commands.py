@@ -53,8 +53,8 @@ class Option:
         options: list
 
     def __init__(self, name: str, description: str, type: ApplicationCommandOptionType, *, required: bool = False, choices: Optional[List[Choice]] = None, options: list = None):
-        if options and type not in (1, 2):
-            raise ValueError('Options can only be used in options of type 1 or 2 (subcommand or subcommand group)')
+        if options and type not in (ApplicationCommandOptionType.subcommand, ApplicationCommandOptionType.subcommand_group):
+            raise ValueError('Options can only be used in options of type subcommand or subcommand group')
         self.name = name
         self.description = description
         self.type = type
